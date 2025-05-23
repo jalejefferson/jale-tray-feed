@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 🔁 Substitua pela URL real do seu feed XML da Tray
-const TRAY_FEED_URL = 'https://seudominio.com.br/feed/produtos.xml';
+const TRAY_FEED_URL = 'https://www.jaledistribuidora.com.br/xml/xml.php?Chave=wav9mYlNWYmxnN3QzMxITM';
 
 app.get('/produtos', async (req, res) => {
   try {
