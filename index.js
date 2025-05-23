@@ -39,7 +39,11 @@ app.get('/produtos', async (req, res) => {
 
 app.get('/produtos/:termo', async (req, res) => {
   try {
-    const termo = req.params.termo.toLowerCase();
+    const termo = req.params.termo
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
     const { data: xml } = await axios.get(TRAY_FEED_URL);
 
     xml2js.parseString(xml, { explicitArray: false, tagNameProcessors: [xml2js.processors.stripPrefix] }, (err, result) => {
@@ -48,11 +52,13 @@ app.get('/produtos/:termo', async (req, res) => {
       const itens = result.rss?.channel?.item || [];
       const lista = Array.isArray(itens) ? itens : [itens];
 
-      const filtrados = lista.filter(p =>
-        p.title?.toLowerCase().includes(termo) ||
-        p.description?.toLowerCase().includes(termo) ||
-        p.product_type?.toLowerCase().includes(termo)
-      );
+      const filtrados = lista.filter(p => {
+        const texto = `${p.title || ''} ${p.description || ''} ${p.product_type || ''}`
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        return texto.includes(termo);
+      });
 
       const resposta = filtrados.map(p => ({
         id: p.id,
