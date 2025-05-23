@@ -37,6 +37,44 @@ app.get('/produtos', async (req, res) => {
   }
 });
 
+app.get('/produtos/:termo', async (req, res) => {
+  try {
+    const termo = req.params.termo.toLowerCase();
+    const { data: xml } = await axios.get(TRAY_FEED_URL);
+
+    xml2js.parseString(xml, { explicitArray: false, tagNameProcessors: [xml2js.processors.stripPrefix] }, (err, result) => {
+      if (err) return res.status(500).json({ error: 'Erro ao converter XML.' });
+
+      const itens = result.rss?.channel?.item || [];
+      const lista = Array.isArray(itens) ? itens : [itens];
+
+      const filtrados = lista.filter(p =>
+        p.title?.toLowerCase().includes(termo) ||
+        p.description?.toLowerCase().includes(termo) ||
+        p.product_type?.toLowerCase().includes(termo)
+      );
+
+      const resposta = filtrados.map(p => ({
+        id: p.id,
+        nome: p.title,
+        preco: p.price,
+        sku: p.mpn || p.gtin || p.id,
+        link: p.link,
+        imagem: p.image_link,
+        categoria: p.product_type,
+        marca: p.brand,
+        disponibilidade: p.availability,
+        descricao: p.description
+      }));
+
+      res.json(resposta);
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erro ao acessar ou filtrar produtos.' });
+  }
+});
+
 app.get('/', (req, res) => {
   res.send('API Tray Feed para GPT - Jale Distribuidora 🚀');
 });
