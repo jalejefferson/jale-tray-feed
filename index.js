@@ -1,36 +1,38 @@
-// Script Node.js para consumir o feed XML da Tray, transformar em JSON e expor via API
-
 const express = require('express');
 const axios = require('axios');
 const xml2js = require('xml2js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 🔁 Substitua pela URL real do seu feed XML da Tray
 const TRAY_FEED_URL = 'https://www.jaledistribuidora.com.br/xml/xml.php?Chave=wav9mYlNWYmxnN3QzMxITM';
 
 app.get('/produtos', async (req, res) => {
   try {
     const { data: xml } = await axios.get(TRAY_FEED_URL);
-
-    xml2js.parseString(xml, { explicitArray: false }, (err, result) => {
+    
+    xml2js.parseString(xml, { explicitArray: false, tagNameProcessors: [xml2js.processors.stripPrefix] }, (err, result) => {
       if (err) return res.status(500).json({ error: 'Erro ao converter XML.' });
 
-      const produtos = result.produtos?.produto || [];
-      const lista = Array.isArray(produtos) ? produtos : [produtos];
+      const itens = result.rss?.channel?.item || [];
+      const lista = Array.isArray(itens) ? itens : [itens];
 
       const resposta = lista.map(p => ({
-        nome: p.nome,
-        preco: p.preco_por,
-        sku: p.id_externo,
-        link: p.url,
-        categoria: p.categoria,
-        estoque: p.estoque_disponivel
+        id: p.id,
+        nome: p.title,
+        preco: p.price,
+        sku: p.mpn || p.gtin || p.id,
+        link: p.link,
+        imagem: p.image_link,
+        categoria: p.product_type,
+        marca: p.brand,
+        disponibilidade: p.availability,
+        descricao: p.description
       }));
 
       res.json(resposta);
     });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Erro ao acessar o feed Tray.' });
   }
 });
